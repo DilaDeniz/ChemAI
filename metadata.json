@@ -1,0 +1,5 @@
+{
+  "name": "ChemAI Nexus",
+  "description": "An AI-powered chemical computation and drug discovery assistant. It performs complex calculations, predicts drug interactions, and minimizes side effects, designed for research institutions.",
+  "requestFramePermissions": []
+}
