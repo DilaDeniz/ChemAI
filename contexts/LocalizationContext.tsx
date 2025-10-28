@@ -18,7 +18,8 @@ export const translations = {
     interactionsTitle: "Interactions & Optimization",
     panelPlaceholder: "Enter a compound and click 'Analyze' to see the results here.",
     error: "Error",
-    downloadData: "Download Data"
+    downloadData: "Download Data",
+    sourcesTitle: "Data Sources"
   },
   tr: {
     searchTitle: "İlaç, Element ya da Bileşik",
@@ -37,7 +38,8 @@ export const translations = {
     interactionsTitle: "Etkileşimler ve Optimizasyon",
     panelPlaceholder: "Sonuçları burada görmek için bir bileşik girin ve 'Analiz Et'e tıklayın.",
     error: "Hata",
-    downloadData: "Veriyi İndir"
+    downloadData: "Veriyi İndir",
+    sourcesTitle: "Veri Kaynakları"
   },
 };
 

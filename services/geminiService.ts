@@ -11,18 +11,40 @@ const getSystemInstruction = (language: 'en' | 'tr'): string => {
         ? 'Tüm yanıtların Türkçe olmalıdır. Bilimsel terim açıklamaları da Türkçe olmalıdır.' 
         : 'All responses must be in English. The definitions for scientific terms must also be in English.';
 
-    return `You are ChemAI Nexus, an advanced AI assistant for chemical computation and drug discovery. Your task is to provide detailed information about a given chemical compound, drug, or element. ${langInstruction} You must return your response as a single, well-formed JSON object. This object must contain three keys: "generalInfo", "summary", and "interactionsAndOptimization".
+    return `You are ChemAI, an advanced AI assistant for chemical computation and drug discovery. You now have access to Google Search to find the most current information. When providing information about chemical compounds, you MUST prioritize data from reliable sources, especially PubChem (pubchem.ncbi.nlm.nih.gov). 
+Your task is to provide detailed information about a given chemical compound, drug, or element. ${langInstruction} You must return your response as a single, well-formed JSON object. This object must contain three keys: "generalInfo", "summary", and "interactionsAndOptimization".
 - "generalInfo": This key should contain a comprehensive overview of the compound. Include details like its chemical formula, molecular weight, IUPAC name, physical description, history, and common uses.
 - "summary": This key should contain a summary of the compound's effects, interactions, and key findings. For drugs, this should include mechanism of action, known side effects, and interactions with other substances. For chemicals, describe reactivity and safety information.
 - "interactionsAndOptimization": This key must contain two sub-sections. First, predict potential interactions with at least 5 common drugs/chemicals. Second, based on a wide chemical library analysis, propose a new, optimized formula for the compound to minimize side effects and improve efficacy, explaining your reasoning.
 - **IMPORTANT**: For any scientific term that might be unknown to a student (e.g., 'agonist', 'enantiomer', 'pharmacokinetics'), you MUST format it as: [term]-->(A brief, one-sentence definition here.). Do this for all three sections. All content for the keys must be markdown strings.`;
 }
 
+const robustJsonParse = (jsonString: string): any => {
+    try {
+        // First, try to parse the string directly.
+        return JSON.parse(jsonString);
+    } catch (e) {
+        // If it fails, check if the content is wrapped in markdown-style code blocks.
+        const match = jsonString.match(/```json\n([\s\S]*?)\n```/);
+        if (match && match[1]) {
+            try {
+                return JSON.parse(match[1]);
+            } catch (e2) {
+                console.error("Failed to parse extracted JSON:", e2);
+                throw new Error("Invalid JSON structure received from AI after extraction.");
+            }
+        }
+        console.error("Failed to parse original JSON string:", e);
+        throw new Error("Invalid JSON structure received from AI.");
+    }
+}
+
+
 export const getCompoundInfo = async (
   compoundName: string,
   filters: string[],
   language: 'en' | 'tr'
-): Promise<{ generalInfo: string; summary: string, interactionsAndOptimization: string }> => {
+): Promise<{ generalInfo: string; summary: string; interactionsAndOptimization: string; sources: any[] }> => {
   const modelName = 'gemini-2.5-pro';
   
   const langPrompt = language === 'tr' ? 'Türkçe' : 'English';
@@ -30,32 +52,23 @@ export const getCompoundInfo = async (
   Consider these filters if applicable (e.g., for drug formulation): ${filters.join(', ') || 'none'}.
   Provide a detailed analysis in the specified JSON format. The entire response, including all text within the JSON values, must be in ${langPrompt}.`;
 
-  const responseSchema = {
-      type: Type.OBJECT,
-      properties: {
-        generalInfo: { type: Type.STRING, description: 'Comprehensive overview in Markdown.' },
-        summary: { type: Type.STRING, description: 'Summary of effects and findings in Markdown.' },
-        interactionsAndOptimization: { type: Type.STRING, description: 'Interaction predictions and formula optimization suggestions in Markdown.' },
-      },
-      required: ['generalInfo', 'summary', 'interactionsAndOptimization'],
-    };
-
   try {
     const response = await ai.models.generateContent({
       model: modelName,
       contents: prompt,
       config: {
         systemInstruction: getSystemInstruction(language),
-        responseMimeType: "application/json",
-        responseSchema: responseSchema,
+        tools: [{googleSearch: {}}],
       }
     });
     
     const jsonString = response.text;
-    const parsed = JSON.parse(jsonString);
+    const parsed = robustJsonParse(jsonString);
+    const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
+
 
     if (typeof parsed.generalInfo === 'string' && typeof parsed.summary === 'string' && typeof parsed.interactionsAndOptimization === 'string') {
-        return parsed;
+        return { ...parsed, sources };
     } else {
         throw new Error("Invalid JSON structure received from AI.");
     }

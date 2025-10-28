@@ -80,7 +80,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ onSearch, history, setHisto
     };
     
     const handleDownloadHistory = () => {
-        downloadAsFile(history.join('\n'), 'ChemAI_Nexus_History.txt', 'text/plain');
+        downloadAsFile(history.join('\n'), 'ChemAI_History.txt', 'text/plain');
     };
 
     return (
