@@ -12,11 +12,12 @@ const getSystemInstruction = (language: 'en' | 'tr'): string => {
         : 'All responses must be in English. The definitions for scientific terms must also be in English.';
 
     return `You are ChemAI, an advanced AI assistant for chemical computation and drug discovery. You now have access to Google Search to find the most current information. When providing information about chemical compounds, you MUST prioritize data from reliable sources, especially PubChem (pubchem.ncbi.nlm.nih.gov). 
-Your task is to provide detailed information about a given chemical compound, drug, or element. ${langInstruction} You must return your response as a single, well-formed JSON object. This object must contain three keys: "generalInfo", "summary", and "interactionsAndOptimization".
+Your task is to provide detailed information about a given chemical compound, drug, or element. ${langInstruction} You must return your response as a single, well-formed JSON object. This object must contain four keys: "generalInfo", "summary", "interactionsAndOptimization", and "physicochemicalProperties".
 - "generalInfo": This key should contain a comprehensive overview of the compound. Include details like its chemical formula, molecular weight, IUPAC name, physical description, history, and common uses.
 - "summary": This key should contain a summary of the compound's effects, interactions, and key findings. For drugs, this should include mechanism of action, known side effects, and interactions with other substances. For chemicals, describe reactivity and safety information.
 - "interactionsAndOptimization": This key must contain two sub-sections. First, predict potential interactions with at least 5 common drugs/chemicals. Second, based on a wide chemical library analysis, propose a new, optimized formula for the compound to minimize side effects and improve efficacy, explaining your reasoning.
-- **IMPORTANT**: For any scientific term that might be unknown to a student (e.g., 'agonist', 'enantiomer', 'pharmacokinetics'), you MUST format it as: [term]-->(A brief, one-sentence definition here.). Do this for all three sections. All content for the keys must be markdown strings.`;
+- "physicochemicalProperties": This key must contain an array of objects for charting. Each object should have three keys: "name" (string, e.g., "Molecular Weight"), "value" (number, e.g., 180.16), and "unit" (string, e.g., "g/mol"). Provide at least 3-5 key properties like Molecular Weight, Melting Point, Boiling Point, and Density where applicable. If a value is not available, omit that property from the array.
+- **IMPORTANT**: For any scientific term that might be unknown to a student (e.g., 'agonist', 'enantiomer', 'pharmacokinetics'), you MUST format it as: [term]-->(A brief, one-sentence definition here.). Do this for all three text sections. All content for the text keys must be markdown strings.`;
 }
 
 const robustJsonParse = (jsonString: string): any => {
@@ -44,7 +45,7 @@ export const getCompoundInfo = async (
   compoundName: string,
   filters: string[],
   language: 'en' | 'tr'
-): Promise<{ generalInfo: string; summary: string; interactionsAndOptimization: string; sources: any[] }> => {
+): Promise<{ generalInfo: string; summary: string; interactionsAndOptimization: string; physicochemicalProperties: any[]; sources: any[] }> => {
   const modelName = 'gemini-2.5-pro';
   
   const langPrompt = language === 'tr' ? 'Türkçe' : 'English';
@@ -65,10 +66,11 @@ export const getCompoundInfo = async (
     const jsonString = response.text;
     const parsed = robustJsonParse(jsonString);
     const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
+    const properties = Array.isArray(parsed.physicochemicalProperties) ? parsed.physicochemicalProperties : [];
 
 
     if (typeof parsed.generalInfo === 'string' && typeof parsed.summary === 'string' && typeof parsed.interactionsAndOptimization === 'string') {
-        return { ...parsed, sources };
+        return { ...parsed, physicochemicalProperties: properties, sources };
     } else {
         throw new Error("Invalid JSON structure received from AI.");
     }

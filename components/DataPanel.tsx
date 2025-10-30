@@ -1,5 +1,6 @@
 import React, { useContext } from 'react';
-import Tooltip from './Tooltip';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import TooltipComponent from './Tooltip';
 import { LocalizationContext } from '../contexts/LocalizationContext';
 import { downloadAsFile } from '../utils/download';
 
@@ -32,7 +33,7 @@ const renderContent = (content: string) => {
                 {parts.map((part, index) => {
                     if (index % 3 === 1) { // This is the term
                         const definition = parts[index + 1];
-                        return <Tooltip key={index} term={part} definition={definition} />;
+                        return <TooltipComponent key={index} term={part} definition={definition} />;
                     }
                     if (index % 3 === 2) { // This is the definition, already used
                         return null;
@@ -68,15 +69,19 @@ interface PanelProps {
   compound: string;
   content: string;
   isLoading: boolean;
+  physicochemicalProperties?: { name: string; value: number; unit: string }[];
 }
 
-const DataPanel: React.FC<PanelProps> = ({ title, compound, content, isLoading }) => {
+const DataPanel: React.FC<PanelProps> = ({ title, compound, content, isLoading, physicochemicalProperties }) => {
     const { t } = useContext(LocalizationContext);
     
     const handleDownload = () => {
         const fileName = `${compound}_${title.replace(/\s/g, '_')}.txt`;
         downloadAsFile(content, fileName, 'text/plain');
     };
+    
+    const hasChartData = !isLoading && physicochemicalProperties && physicochemicalProperties.length > 0;
+    const hasContent = !isLoading && content;
 
     return (
         <div className="p-4 h-full flex flex-col bg-gray-800/50 rounded-lg min-h-0">
@@ -90,10 +95,35 @@ const DataPanel: React.FC<PanelProps> = ({ title, compound, content, isLoading }
                     </button>
                 )}
             </div>
-            <div className="flex-grow overflow-y-auto custom-scrollbar min-h-0">
-                <div className="prose prose-invert prose-sm max-w-none text-gray-300 pr-2">
-                    {isLoading ? <LoadingSpinner /> : content ? renderContent(content) : <Placeholder title={title} />}
-                </div>
+            <div className="flex-grow overflow-y-auto custom-scrollbar min-h-0 pr-2">
+                {isLoading ? <LoadingSpinner /> : (
+                  (hasChartData || hasContent) ? (
+                    <div>
+                        {hasChartData && (
+                            <div className="h-64 mb-6">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={physicochemicalProperties} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
+                                        <XAxis dataKey="name" stroke="#9CA3AF" tick={{ fontSize: 12 }} angle={-10} textAnchor="end" height={50} />
+                                        <YAxis stroke="#9CA3AF" tick={{ fontSize: 12 }} />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #4F46E5', borderRadius: '0.5rem' }}
+                                            labelStyle={{ color: '#E5E7EB', fontWeight: 'bold' }}
+                                            formatter={(value: number, name: string, props: any) => [`${value} ${props.payload.unit}`, "Value"]}
+                                        />
+                                        <Line type="monotone" dataKey="value" stroke="#818cf8" strokeWidth={2} activeDot={{ r: 8 }} name="Value" />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        )}
+                        {hasContent && (
+                             <div className="prose prose-invert prose-sm max-w-none text-gray-300">
+                                {renderContent(content)}
+                            </div>
+                        )}
+                    </div>
+                  ) : <Placeholder title={title} />
+                )}
             </div>
         </div>
     );

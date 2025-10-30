@@ -12,6 +12,7 @@ const App: React.FC = () => {
   const [generalInfo, setGeneralInfo] = useState<string>('');
   const [summary, setSummary] = useState<string>('');
   const [interactions, setInteractions] = useState<string>('');
+  const [physicochemicalProperties, setPhysicochemicalProperties] = useState<any[]>([]);
   const [sources, setSources] = useState<any[]>([]);
   const [history, setHistory] = useState<string[]>(['Aspirin', 'Caffeine', 'H2O']);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -62,6 +63,7 @@ const App: React.FC = () => {
     setIsLoading(true);
     setError(null);
     setSources([]);
+    setPhysicochemicalProperties([]);
     setCurrentCompound(compound);
 
     if (!history.includes(compound)) {
@@ -77,6 +79,7 @@ const App: React.FC = () => {
         setGeneralInfo(data.generalInfo);
         setSummary(data.summary);
         setInteractions(data.interactionsAndOptimization);
+        setPhysicochemicalProperties(data.physicochemicalProperties);
         setSources(data.sources);
     } catch (err) {
         if (err instanceof Error) {
@@ -88,6 +91,7 @@ const App: React.FC = () => {
         setSummary('');
         setInteractions('');
         setSources([]);
+        setPhysicochemicalProperties([]);
     } finally {
         setIsLoading(false);
     }
@@ -111,7 +115,13 @@ const App: React.FC = () => {
               </div>
             )}
             <div className="grid lg:grid-cols-3 gap-4">
-              <DataPanel title={t('generalInfoTitle')} compound={currentCompound} content={generalInfo} isLoading={loadingState} />
+              <DataPanel 
+                title={t('generalInfoTitle')} 
+                compound={currentCompound} 
+                content={generalInfo} 
+                isLoading={loadingState}
+                physicochemicalProperties={physicochemicalProperties}
+              />
               <DataPanel title={t('summaryTitle')} compound={currentCompound} content={summary} isLoading={loadingState} />
               <DataPanel title={t('interactionsTitle')} compound={currentCompound} content={interactions} isLoading={loadingState} />
             </div>
