@@ -4,6 +4,7 @@ import Header from './components/Header';
 import ControlPanel from './components/ControlPanel';
 import DataPanel from './components/DataPanel';
 import SourcesPanel from './components/SourcesPanel';
+import GlobalStyles from './components/GlobalStyles';
 import { LocalizationContext, translations } from './contexts/LocalizationContext';
 import type { FilterState } from './types';
 
@@ -101,6 +102,7 @@ const App: React.FC = () => {
 
   return (
     <LocalizationContext.Provider value={{ language, setLanguage, t }}>
+      <GlobalStyles />
       <div className="h-screen flex flex-col bg-gray-900 text-gray-200">
         <Header />
         <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
